@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Travel Map Preview</title>
+  <style>
+    body { font-family: sans-serif; background: #f9f9f9; margin: 0; padding: 2rem; }
+    #map { position: relative; width: 100%; height: 400px; background: #dfefff; margin-top: 1rem; }
+    .marker { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #ff5722; border: 2px solid white; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body>
+  <h1>🌍 My World Travel Map</h1>
+  <input id="searchBox" type="text" placeholder="Search country or city..." />
+  <div class="controls">
+    <label for="mode">Mode:</label>
+    <select id="mode">
+      <option value="country">Country</option>
+      <option value="city">City</option>
+    </select>
+    <button onclick="toggleRanking()">Toggle Ranking</button>
+  </div>
+  <div id="map"></div>
+  <p id="visited-percent">Visited: 0%</p>
+  <div id="ranking" style="display:none">
+    <h2>Top Travelers</h2>
+    <ol id="ranking-list"></ol>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const mockCountries = {
+        "France": { x: 430, y: 170 },
+        "Japan": { x: 770, y: 200 },
+        "Brazil": { x: 360, y: 300 },
+        "Canada": { x: 270, y: 100 },
+        "Australia": { x: 800, y: 340 }
+      };
+
+      const mockCities = {
+        "Seoul": { x: 790, y: 190 },
+        "New York": { x: 270, y: 200 },
+        "Paris": { x: 440, y: 175 },
+        "Tokyo": { x: 780, y: 195 },
+        "Sydney": { x: 820, y: 350 }
+      };
+
+      let visitedPlaces = new Set();
+
+      const searchBox = document.getElementById("searchBox");
+      const visitedPercent = document.getElementById("visited-percent");
+      const rankingList = document.getElementById("ranking-list");
+      const rankingContainer = document.getElementById("ranking");
+      const modeSelect = document.getElementById("mode");
+      const mapElement = document.getElementById("map");
+
+      searchBox.addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+          const value = searchBox.value.trim();
+          if (!value) return;
+          handleSelection(value);
+          searchBox.value = "";
+        }
+      });
+
+      function handleSelection(name) {
+        const mode = modeSelect.value;
+        const source = mode === "country" ? mockCountries : mockCities;
+        if (source[name] && !visitedPlaces.has(name)) {
+          visitedPlaces.add(name);
+          placeMarker(source[name]);
+          updateStats();
+        } else {
+          alert("Location not recognized or already visited.");
+        }
+      }
+
+      function placeMarker(coords) {
+        const marker = document.createElement("div");
+        marker.classList.add("marker");
+        marker.style.left = coords.x + "px";
+        marker.style.top = coords.y + "px";
+        mapElement.appendChild(marker);
+        gsap.fromTo(marker, { opacity: 0 }, { opacity: 1, duration: 1 });
+      }
+
+      function updateStats() {
+        const total = Object.keys(mockCountries).length + Object.keys(mockCities).length;
+        const percent = Math.round((visitedPlaces.size / total) * 100);
+        visitedPercent.textContent = `Visited: ${percent}%`;
+      }
+
+      window.toggleRanking = function () {
+        if (rankingContainer.style.display === "none") {
+          updateRanking();
+          rankingContainer.style.display = "block";
+        } else {
+          rankingContainer.style.display = "none";
+        }
+      }
+
+      function updateRanking() {
+        const mockUsers = [
+          { name: "Alice", visited: 3 },
+          { name: "Bob", visited: 5 },
+          { name: "You", visited: visitedPlaces.size },
+        ];
+        mockUsers.sort((a, b) => b.visited - a.visited);
+        rankingList.innerHTML = "";
+        mockUsers.forEach((user, i) => {
+          const li = document.createElement("li");
+          li.textContent = `#${i + 1} ${user.name} — ${user.visited} places`;
+          rankingList.appendChild(li);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
