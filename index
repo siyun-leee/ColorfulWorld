@@ -6,14 +6,49 @@
   <title>Travel Map Preview</title>
   <style>
     body { font-family: sans-serif; background: #f9f9f9; margin: 0; padding: 2rem; }
-    #map { position: relative; width: 100%; height: 400px; background: #dfefff; margin-top: 1rem; }
-    .marker { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #ff5722; border: 2px solid white; }
+    #map {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      margin-top: 1rem;
+    }
+    #map img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+    .marker {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #ff5722;
+      border: 2px solid white;
+      z-index: 1;
+    }
+    #suggestions {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      max-height: 150px;
+      overflow-y: auto;
+      position: absolute;
+      z-index: 1000;
+      width: 300px;
+    }
+    #suggestions div { padding: 8px; cursor: pointer; }
+    #suggestions div:hover { background: #eef; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 </head>
 <body>
   <h1>🌍 My World Travel Map</h1>
-  <input id="searchBox" type="text" placeholder="Search country or city..." />
+  <div style="position: relative; display: inline-block;">
+    <input id="searchBox" type="text" placeholder="Search country or city..." autocomplete="off" />
+    <div id="suggestions"></div>
+  </div>
   <div class="controls">
     <label for="mode">Mode:</label>
     <select id="mode">
@@ -22,7 +57,9 @@
     </select>
     <button onclick="toggleRanking()">Toggle Ranking</button>
   </div>
-  <div id="map"></div>
+  <div id="map">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/World_map_blank_without_borders.svg/2000px-World_map_blank_without_borders.svg.png" alt="World Map">
+  </div>
   <p id="visited-percent">Visited: 0%</p>
   <div id="ranking" style="display:none">
     <h2>Top Travelers</h2>
@@ -30,50 +67,74 @@
   </div>
 
   <script>
+    let visitedPlaces = new Set();
+
+    const countryData = {
+      "france": { x: 430, y: 170 },
+      "japan": { x: 770, y: 200 },
+      "brazil": { x: 360, y: 300 },
+      "canada": { x: 270, y: 100 },
+      "australia": { x: 800, y: 340 }
+    };
+
+    const cityData = {
+      "seoul": { x: 790, y: 190 },
+      "new york": { x: 270, y: 200 },
+      "paris": { x: 440, y: 175 },
+      "tokyo": { x: 780, y: 195 },
+      "sydney": { x: 820, y: 350 }
+    };
+
     document.addEventListener("DOMContentLoaded", function () {
-      const mockCountries = {
-        "France": { x: 430, y: 170 },
-        "Japan": { x: 770, y: 200 },
-        "Brazil": { x: 360, y: 300 },
-        "Canada": { x: 270, y: 100 },
-        "Australia": { x: 800, y: 340 }
-      };
-
-      const mockCities = {
-        "Seoul": { x: 790, y: 190 },
-        "New York": { x: 270, y: 200 },
-        "Paris": { x: 440, y: 175 },
-        "Tokyo": { x: 780, y: 195 },
-        "Sydney": { x: 820, y: 350 }
-      };
-
-      let visitedPlaces = new Set();
-
       const searchBox = document.getElementById("searchBox");
       const visitedPercent = document.getElementById("visited-percent");
       const rankingList = document.getElementById("ranking-list");
       const rankingContainer = document.getElementById("ranking");
       const modeSelect = document.getElementById("mode");
       const mapElement = document.getElementById("map");
+      const suggestions = document.getElementById("suggestions");
+
+      searchBox.addEventListener("input", function () {
+        const value = searchBox.value.trim().toLowerCase();
+        suggestions.innerHTML = "";
+        const mode = modeSelect.value;
+        const source = mode === "country" ? countryData : cityData;
+
+        if (value.length >= 1) {
+          Object.keys(source).forEach(name => {
+            if (name.startsWith(value)) {
+              const item = document.createElement("div");
+              item.textContent = name;
+              item.onclick = () => {
+                handleSelection(name);
+                suggestions.innerHTML = "";
+                searchBox.value = "";
+              };
+              suggestions.appendChild(item);
+            }
+          });
+        }
+      });
 
       searchBox.addEventListener("keypress", function (e) {
         if (e.key === "Enter") {
-          const value = searchBox.value.trim();
+          const value = searchBox.value.trim().toLowerCase();
           if (!value) return;
           handleSelection(value);
           searchBox.value = "";
+          suggestions.innerHTML = "";
         }
       });
 
       function handleSelection(name) {
         const mode = modeSelect.value;
-        const source = mode === "country" ? mockCountries : mockCities;
+        const source = mode === "country" ? countryData : cityData;
         if (source[name] && !visitedPlaces.has(name)) {
           visitedPlaces.add(name);
           placeMarker(source[name]);
           updateStats();
-        } else {
-          alert("Location not recognized or already visited.");
+        } else if (!source[name]) {
+          alert("Location not recognized.");
         }
       }
 
@@ -87,7 +148,7 @@
       }
 
       function updateStats() {
-        const total = Object.keys(mockCountries).length + Object.keys(mockCities).length;
+        const total = Object.keys(countryData).length + Object.keys(cityData).length;
         const percent = Math.round((visitedPlaces.size / total) * 100);
         visitedPercent.textContent = `Visited: ${percent}%`;
       }
